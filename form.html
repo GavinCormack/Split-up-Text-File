@@ -1,0 +1,167 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+</head>
+<body>
+    <style>
+
+        .pin {
+            background-color: green;
+            cursor: pointer;
+        }
+        .pinEnd {
+            background-color: red;
+        }
+
+    </style>
+    <div>
+        <div id="fileText" style="margin:10px;"></div>
+        <div id="clauses" style="margin:10px;"></div>
+    </div>
+    <div style="float:left;">
+        <input type="file" id="file" name="file[]" accept=".txt" />
+        <button type="button" id="getClauses" style="float:left;" onclick="getClauses()">Get Clauses!</button>
+        <button type="button" style="float:left;" onclick="addPin()">Add Pin!</button>
+    </div>
+    <script>
+
+          function handleFileSelect(evt) {
+            var files = evt.target.files; // FileList object
+
+            // Loop through the FileList and read text file.
+            for (var i = 0, f; f = files[i]; i++) {
+
+              var reader = new FileReader();
+
+              // Closure to capture the file information.
+              reader.onload = (function(theFile) {
+                return function(e) {
+                  // Display Text.
+                  var div = document.createElement('div');
+                  div.innerHTML = '<div class="text" style="border:1px solid black; padding:10px;" width="inherit"> <span class="pin" id="pin1">||</span>' + e.target.result + '<span class="pinEnd" id="pin0">!!</span> <div/>';
+                  document.getElementById('fileText').appendChild(div);
+                };
+              })(f);
+
+              // Read file as text.
+              reader.readAsText(f);
+            }
+          }
+
+          var count = 1;
+
+          $(document).on("mousedown", '.pin', function (e) {
+              //define what a pin is
+              if (e.target.id == 'pin1') { //create new pin
+                  var el = document.createElement("span");
+                  count++;
+                  el.className = "pin";
+                  el.id = "pin" + count;
+              }
+              else {
+                  var el = document.createElement("span");
+                  el.className = e.target.className;
+                  el.id = e.target.id;
+              }
+
+              //make it contain an empty space so we can color it
+              el.appendChild(document.createTextNode('||'));
+
+              e.preventDefault();
+
+              $(document).on("mousemove", function (e) {
+                  var range, textRange, x = e.clientX, y = e.clientY;
+
+
+                  var removeNode = document.getElementById('pin0').getBoundingClientRect(); //rect of "REMOVE NODE"
+
+                  //remove the old pin
+                  if (e.target.id != 'pin1' && e.target.id != 'pin0') { //if pin is instance remove it
+                      $('#' + e.target.id).remove();
+                  }
+                  // Try the standards-based way first
+                  if (document.caretPositionFromPoint) {
+                      var pos = document.caretPositionFromPoint(x, y);
+                      range = document.createRange();
+                      range.setStart(pos.offsetNode, pos.offset);
+                      range.collapse();
+                  }
+                      // Next, the WebKit way
+                  else if (document.caretRangeFromPoint) {
+                      range = document.caretRangeFromPoint(x, y);
+                  }
+                      // Finally, the IE way
+                  else if (document.body.createTextRange) {
+                      textRange = document.body.createTextRange();
+                      textRange.moveToPoint(x, y);
+                      var spanId = "temp_" + ("" + Math.random()).slice(2);
+                      textRange.pasteHTML('<span id="' + spanId + '">&nbsp;</span>');
+                      var span = document.getElementById(spanId);
+                      //place the new pin
+                      span.parentNode.replaceChild(el, span);
+                  }
+
+
+                  if (range) {
+                      if (x >= removeNode.left && x <= removeNode.right &&
+                          y >= removeNode.top && y <= removeNode.bottom) { //remove pin if its in "REMOVE NODE"
+                          el.remove();
+                      }
+                      else { //place the new pin
+                          range.insertNode(el);
+                      }
+                  }
+              });
+              //remove the handler when the user has stopped dragging it
+              $(document).on("mouseup", function () {
+                  $(document).off("mousemove");
+              });
+          });
+
+
+
+          //get the broken up clauses
+          function getClauses() {
+              //update clauses
+              while(document.getElementById('clauses').hasChildNodes()) {
+                  document.getElementById('clauses').removeChild(document.getElementById('clauses').firstChild);
+              }
+              var texts = [];
+              var count = $(".text > span").length //number of spans
+              document.getElementsByClassName('text')[0].normalize(); //removes any empty text nodes and merges text nodes together
+
+              //inform users that clauses are below
+              var title = document.createElement("div");
+              title.setAttribute("style", "padding:2px; margin:10px; font-size:20px;");
+              title.innerHTML = "Clauses";
+              document.getElementById('clauses').appendChild(title);
+
+              for (var i = 0; i < count; i++) {
+                  //get each text
+                  var a = $(".text span")[i];
+                  var textNode = a.nextSibling;
+                  var text = textNode.textContent;
+
+                  if (text.trim() != '' && text.trim() != '||') { //make sure clause isn't empty or "||"
+                      //create the div and display text
+                      var main = document.createElement("div");
+                      var number = document.createElement("div");
+                      var clause = document.createElement("div");
+                      clause.setAttribute("style", "border:1px solid black; padding:2px; margin:10px;");
+                      clause.innerHTML = text;
+                      main.setAttribute("width", "inherit");
+                      main.appendChild(clause);
+                      document.getElementById('clauses').appendChild(main);
+                  }
+              }
+
+          }
+
+          document.getElementById('file').addEventListener('change', handleFileSelect, false);
+    </script>
+
+
+</body>
+</html>
